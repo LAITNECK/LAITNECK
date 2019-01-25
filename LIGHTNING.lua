@@ -149,21 +149,7 @@ NAMEBOT = (tahadevstorm:get(DEVSTOR..'storm:name') or 'ستورم')
 bot_id = sudos.token:match("(%d+)")  
 chaneel = sudos.token 
 plugins = {}
-function run_file(msg)
-for k, v in pairs(plugins) do
-text_file(v,k,msg)
-end
-end
-function text_file(v,k,msg)
-if v.THESTORM then
-local text = v.THESTORM(msg)
-if text then
-storm_sendMsg(msg.chat_id_, msg.id_, 1,text, 1, 'md') 
-return false
-end
-end
-end
-function ReloadPlugins()
+function load_plugins()
 for v in io.popen('ls plugins_'):lines() do
 if v:match(".lua$") then
 local ok, err =  pcall(function()
@@ -171,11 +157,60 @@ local t = loadfile("plugins_/"..v)()
 plugins[v] = t
 end)
 if not ok then
-print('\27[31m Error file : '..v..'\27[39m')
+print('\27[31mError loading plugins_ '..v..'\27[39m')
 print(tostring(io.popen("lua plugins_/"..v):read('*all')))
 print('\27[31m'..err..'\27[39m')
 end
 end
+end
+end
+function Tepy_Text(CMD, text, lower_case)
+if text then
+local MSG_TEXT = {}
+if lower_case then
+MSG_TEXT = { string.match(text:lower(), CMD) }
+else
+MSG_TEXT = { string.match(text, CMD) }
+end
+if next(MSG_TEXT) then
+return MSG_TEXT
+end
+end
+end
+
+function Msg_Process(msg)
+for name,plugin in pairs(plugins) do
+if plugin.STORM_TEXT and msg then
+print('\27[30;35m The Msg Process :'..name..'\n\27[1;37m')
+pre_msg = plugin.STORM_TEXT(msg)
+end
+end
+return storm_sendMsg(msg.chat_id_, msg.id_, 1,pre_msg, 1, 'md')  
+end
+
+function match_plugin(msg, CMD, plugin, plugin_name)
+MSG_TEXT = Tepy_Text(CMD, text)
+if MSG_TEXT then
+print('\27[30;35m The Text : '..CMD..' | In File : '..plugin_name..' \n\27[1;37m')
+if plugin.STORM then
+local TEXT = plugin.STORM(msg,MSG_TEXT)
+if TEXT then
+storm_sendMsg(msg.chat_id_, msg.id_, 1,TEXT, 1, 'md')  
+end
+end
+return
+end
+end
+
+function FILES_PLUGIN(plugin, plugin_name, msg)
+for k, CMD in pairs(plugin.CMDS) do
+match_plugin(msg, CMD, plugin, plugin_name)
+end
+end
+
+function TEXT_FILES(msg)
+for name, plugin in pairs(plugins) do
+FILES_PLUGIN(plugin, name, msg)
 end
 end
 print("____________________\nFILES IN BOT ↓")
@@ -186,7 +221,14 @@ if fa:match(".lua$") then
 print(fa..'\n\n')
 end
 end 
-ReloadPlugins()
+
+
+load_plugins()
+function SEND_FILES(msg)
+Msg_Process(msg)
+TEXT_FILES(msg)
+end
+
 function is_devtaha(msg)  local ta = false  for k,v in pairs(sudo_users) do  if msg.sender_user_id_ == v then  ta = true  end  end  return ta  end 
 function is_sudo(msg) local hash = tahadevstorm:sismember(DEVSTOR..'sudo:bot',msg.sender_user_id_)  if hash or is_devtaha(msg)  then  return true  else  return false  end  end
 function is_bot(msg) if tonumber(BOTS) == BOTS then return true else return false end end 
@@ -828,7 +870,7 @@ local json_file, res = https.request("https://raw.githubusercontent.com/NOVAR1/N
 if res == 200 then
 os.execute("rm -fr plugins_/"..file)
 storm_sendMsg(msg.chat_id_, msg.id_, 1,t, 1, 'md') 
-ReloadPlugins()
+load_plugins()
 dofile('LIGHTNING.lua')  
 else
 storm_sendMsg(msg.chat_id_, msg.id_, 1,"*📮¦ عذرا لا يوجد هاكذا ملف في المتجر *\n", 1, 'md') 
@@ -849,7 +891,7 @@ local chek = io.open("plugins_/"..file,'w+')
 chek:write(json_file)
 chek:close()
 storm_sendMsg(msg.chat_id_, msg.id_, 1,t, 1, 'md') 
-ReloadPlugins()
+load_plugins()
 dofile('LIGHTNING.lua')  
 else
 storm_sendMsg(msg.chat_id_, msg.id_, 1,"*📮¦ عذرا لا يوجد هاكذا ملف في المتجر *\n", 1, 'md') 
@@ -857,7 +899,7 @@ end
 end
 if text == 'تحديث' and is_devtaha(msg) then  
 dofile('LIGHTNING.lua')  
-ReloadPlugins()
+load_plugins()
 storm_sendMsg(msg.chat_id_, msg.id_, 1, '*📮¦ تم تحديث الملفات ♻* \n', 1, 'md') 
 end 
 
@@ -1899,7 +1941,7 @@ if text == 'تفعيل البوت الخدمي 🎮' and is_devtaha(msg) then lo
 if text == 'تعطيل البوت الخدمي 🚸' and is_devtaha(msg) then taha = '*📛¦*تم تعطيل البوت الخدمي  ❌' storm_sendMsg( msg.chat_id_, msg.id_, 1, taha, 1, "md") tahadevstorm:set(DEVSTOR..'lock:bot:free'..bot_id,true) end
 if text == 'تفعيل تواصل 📨' and is_devtaha(msg) then local  taha = '*📛¦*تم تفعيل بوت التواصل  ✔' storm_sendMsg( msg.chat_id_, msg.id_, 1, taha, 1, "md") tahadevstorm:del(DEVSTOR..'lock:botl'..bot_id) end 
 if text == 'تعطيل تواصل 📩' and is_devtaha(msg) then taha = '*📛¦*تم تعطيل التواصل  ❌' storm_sendMsg( msg.chat_id_, msg.id_, 1, taha, 1, "md") tahadevstorm:set(DEVSTOR..'lock:botl'..bot_id,true) end
-if text == 'تحديث ♻' and is_devtaha(msg) then  local filed = io.popen('ls plugins_'):lines() for files in filed do if files:match(".lua$") then end end dofile('LIGHTNING.lua') ReloadPlugins() io.popen("rm -rf ~/.telegram-cli/data/audio/*") io.popen("rm -rf ~/.telegram-cli/data/document/*") io.popen("rm -rf ~/.telegram-cli/data/photo/*") io.popen("rm -rf ~/.telegram-cli/data/sticker/*") io.popen("rm -rf ~/.telegram-cli/data/temp/*") io.popen("rm -rf ~/.telegram-cli/data/thumb/*") io.popen("rm -rf ~/.telegram-cli/data/video/*") io.popen("rm -rf ~/.telegram-cli/data/voice/*") io.popen("rm -rf ~/.telegram-cli/data/profile_photo/*")   storm_sendMsg(msg.chat_id_, msg.id_, 1, '*📛¦* تم تحديث البوت', 1, 'md') end 
+if text == 'تحديث ♻' and is_devtaha(msg) then  local filed = io.popen('ls plugins_'):lines() for files in filed do if files:match(".lua$") then end end dofile('LIGHTNING.lua') load_plugins() io.popen("rm -rf ~/.telegram-cli/data/audio/*") io.popen("rm -rf ~/.telegram-cli/data/document/*") io.popen("rm -rf ~/.telegram-cli/data/photo/*") io.popen("rm -rf ~/.telegram-cli/data/sticker/*") io.popen("rm -rf ~/.telegram-cli/data/temp/*") io.popen("rm -rf ~/.telegram-cli/data/thumb/*") io.popen("rm -rf ~/.telegram-cli/data/video/*") io.popen("rm -rf ~/.telegram-cli/data/voice/*") io.popen("rm -rf ~/.telegram-cli/data/profile_photo/*")   storm_sendMsg(msg.chat_id_, msg.id_, 1, '*📛¦* تم تحديث البوت', 1, 'md') end 
 if text == "وضع اسم البوت ⚡" and is_devtaha(msg) then tahadevstorm:setex(DEVSTOR..'namebot:witting'..msg.sender_user_id_,300,true) storm_sendMsg(msg.chat_id_, msg.id_, 1, "*📛¦* ارسل لي الاسم 📯\n",1, 'md')  end
 if text == 'مسح المميزين عام 🌟' and is_devtaha(msg) then      local list = tahadevstorm:smembers(DEVSTOR..'vip:groups')    if #list == 0 then  storm_sendMsg(msg.chat_id_, msg.id_, 1,'*📮¦* لا يوجد مميزين عام ليتم مسحهم\n', 1, 'md')   return false  end  local num = 0  for k,v in pairs(list) do    tahadevstorm:srem(DEVSTOR.."vip:groups",v)    num = num + 1  end   storm_sendMsg(msg.chat_id_, msg.id_, 1,'*📬¦ تم مسح {'..num..'} من المميزين عام *\n', 1, 'md')   end
 if text == 'مسح المطورين 👮' and is_devtaha(msg) then     local list = tahadevstorm:smembers(DEVSTOR..'sudo:bot')    if #list == 0 then  storm_sendMsg(msg.chat_id_, msg.id_, 1,'*📮¦* لا يوجد مطورين ليتم مسحهم\n', 1, 'md')   return false  end  local num = 0  for k,v in pairs(list) do    tahadevstorm:srem(DEVSTOR.."sudo:bot",v)    num = num + 1  end   storm_sendMsg(msg.chat_id_, msg.id_, 1,'*📬¦ تم مسح {'..num..'} من المطورين *\n', 1, 'md')   end
@@ -10243,6 +10285,7 @@ end
 storm_sendMssg(msg.chat_id_,t,msg.id_,'md')
 end  
 
+SEND_FILES(msg)
 end
 end
 function tdcli_update_callback(data)  
@@ -10340,7 +10383,6 @@ end
 end
 STORMadd(data.message_,data)   
 STORM(data.message_,data)   
-run_file(msg)
 elseif data.ID == 'UpdateMessageEdited' then  
 local msg = data
 if tonumber(msg.sender_user_id_) == tonumber(bot_id) then
